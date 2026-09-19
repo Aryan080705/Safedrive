@@ -341,12 +341,16 @@ export function useAudioAlerts() {
           };
 
           utterance.onend = finish;
-          utterance.onerror = finish;
+          utterance.onerror = (err) => {
+            console.warn('[SafeDrive] Speech synthesis error:', err);
+            finish();
+          };
 
           window.speechSynthesis.resume();
           window.speechSynthesis.speak(utterance);
         }, 40);
-      } catch {
+      } catch (err) {
+        console.warn('[SafeDrive] Speech speakAssistant exception:', err);
         stopResumeTicker();
         isAssistantSpeakingRef.current = false;
         setIsAssistantSpeaking(false);

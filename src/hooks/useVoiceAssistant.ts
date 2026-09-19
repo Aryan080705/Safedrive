@@ -611,10 +611,25 @@ export function useVoiceAssistant({
   }, [isSafetyAlertActive, speakAssistant]);
 
   const triggerDemoVoiceChat = useCallback(() => {
-    if (!isActiveRef.current) return;
-    setInteractionCount(3);
-    triggerVoiceChat();
-  }, [triggerVoiceChat]);
+    if (!isActiveRef.current || isSafetyAlertActive) return;
+    stopListening();
+    cancelAssistantSpeech();
+    const testMessage = 'RoadGuard voice assistant is active.';
+    setLastAiSpeech(testMessage);
+    setState('INVITATION_SPEAKING');
+    setTranscript('');
+    setInterimTranscript('');
+    consecutiveSilenceCountRef.current = 0;
+    speakAssistant(
+      testMessage,
+      () => {
+        setState('WAITING_FOR_ACCEPTANCE');
+        startListeningForCurrentState('WAITING_FOR_ACCEPTANCE');
+      },
+      undefined,
+      'ENGLISH'
+    );
+  }, [cancelAssistantSpeech, isSafetyAlertActive, speakAssistant, startListeningForCurrentState, stopListening]);
 
   // Cleanup immediately whenever isActive becomes false (leaving GuardianDrive)
   useEffect(() => {
