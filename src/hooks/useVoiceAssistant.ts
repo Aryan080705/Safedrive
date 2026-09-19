@@ -21,6 +21,7 @@ interface UseVoiceAssistantParams {
   isSafetyAlertActive: boolean; // True when drowsiness, critical collision, or SOS is active
   isMuted: boolean;
   roadContext?: RoadContextData;
+  isActive?: boolean; // Scoped activation (True only on GuardianDrive)
 }
 
 export function useVoiceAssistant({
@@ -30,6 +31,7 @@ export function useVoiceAssistant({
   isSafetyAlertActive,
   isMuted,
   roadContext,
+  isActive = true,
 }: UseVoiceAssistantParams) {
   // State Machine State
   const [state, setState] = useState<VoiceAssistantState>('IDLE');
@@ -58,10 +60,13 @@ export function useVoiceAssistant({
   isSafetyAlertActiveRef.current = isSafetyAlertActive;
   const isMutedRef = useRef<boolean>(isMuted);
   isMutedRef.current = isMuted;
+  const isActiveRef = useRef<boolean>(isActive);
+  isActiveRef.current = isActive;
 
   const recognitionRef = useRef<any>(null);
   const isRecognitionActiveRef = useRef<boolean>(false);
   const silenceTimeoutRef = useRef<number | null>(null);
+  const startDelayTimeoutRef = useRef<number | null>(null);
   const pausedFromStateRef = useRef<VoiceAssistantState | null>(null);
   const consecutiveSilenceCountRef = useRef<number>(0);
   // Bug 5 Fix: Track manual aborts to prevent ghost onend processing
@@ -78,8 +83,12 @@ export function useVoiceAssistant({
       clearTimeout(silenceTimeoutRef.current);
       silenceTimeoutRef.current = null;
     }
+    if (startDelayTimeoutRef.current) {
+      clearTimeout(startDelayTimeoutRef.current);
+      startDelayTimeoutRef.current = null;
+    }
 
-    if (recognitionRef.current && isRecognitionActiveRef.current) {
+    if (recognitionRef.current) {
       // Bug 5 Fix: Flag manual abort so onend handler skips processing
       wasManuallyAbortedRef.current = true;
       try {
@@ -87,6 +96,12 @@ export function useVoiceAssistant({
       } catch {
         // Recognition already inactive
       }
+      recognitionRef.current.onstart = null;
+      recognitionRef.current.onresult = null;
+      recognitionRef.current.onspeechend = null;
+      recognitionRef.current.onend = null;
+      recognitionRef.current.onerror = null;
+      recognitionRef.current = null;
       isRecognitionActiveRef.current = false;
     }
     setMicStatus((prev) => (prev === 'LISTENING' || prev === 'PROCESSING' ? 'READY' : prev));
@@ -347,6 +362,7 @@ export function useVoiceAssistant({
       }
 
       // Read from refs, not stale closure props
+      if (!isActiveRef.current) return;
       if (isMutedRef.current) return;
       if (isSafetyAlertActiveRef.current) return;
 
@@ -370,6 +386,12 @@ export function useVoiceAssistant({
         let finalAccumulated = '';
 
         recognition.onstart = () => {
+          if (!isActiveRef.current) {
+            try {
+              recognition.abort();
+            } catch {}
+            return;
+          }
           isRecognitionActiveRef.current = true;
           // Clear abort flag when a new session starts
           wasManuallyAbortedRef.current = false;
@@ -380,6 +402,7 @@ export function useVoiceAssistant({
         };
 
         recognition.onresult = (event: any) => {
+          if (!isActiveRef.current) return;
           let interim = '';
           for (let i = event.resultIndex; i < event.results.length; ++i) {
             if (event.results[i].isFinal) {
@@ -398,13 +421,14 @@ export function useVoiceAssistant({
             clearTimeout(silenceTimeoutRef.current);
           }
           silenceTimeoutRef.current = window.setTimeout(() => {
-            if (isRecognitionActiveRef.current) {
+            if (isRecognitionActiveRef.current && isActiveRef.current) {
               recognition.stop();
             }
           }, 2500);
         };
 
         recognition.onspeechend = () => {
+          if (!isActiveRef.current) return;
           setMicStatus('PROCESSING');
           if (silenceTimeoutRef.current) {
             clearTimeout(silenceTimeoutRef.current);
@@ -419,8 +443,8 @@ export function useVoiceAssistant({
             silenceTimeoutRef.current = null;
           }
 
-          // Skip processing if this onend came from a manual abort
-          if (wasManuallyAbortedRef.current) {
+          // Skip processing if inactive or if this onend came from a manual abort
+          if (!isActiveRef.current || wasManuallyAbortedRef.current) {
             wasManuallyAbortedRef.current = false;
             return;
           }
@@ -436,8 +460,8 @@ export function useVoiceAssistant({
             silenceTimeoutRef.current = null;
           }
 
-          // Don't process errors from manual aborts
-          if (wasManuallyAbortedRef.current) {
+          // Don't process errors if inactive or from manual aborts
+          if (!isActiveRef.current || wasManuallyAbortedRef.current) {
             wasManuallyAbortedRef.current = false;
             return;
           }
@@ -454,8 +478,12 @@ export function useVoiceAssistant({
         };
 
         // 200ms buffer flush delay ensures speaker audio is fully drained before mic starts listening
-        setTimeout(() => {
-          if (!isSafetyAlertActiveRef.current && !isMutedRef.current && !isAssistantSpeakingRef.current) {
+        if (startDelayTimeoutRef.current) {
+          clearTimeout(startDelayTimeoutRef.current);
+        }
+        startDelayTimeoutRef.current = window.setTimeout(() => {
+          startDelayTimeoutRef.current = null;
+          if (isActiveRef.current && !isSafetyAlertActiveRef.current && !isMutedRef.current && !isAssistantSpeakingRef.current) {
             try {
               recognition.start();
             } catch {
@@ -510,7 +538,7 @@ export function useVoiceAssistant({
   }, [isAssistantSpeaking, stopListening]);
 
   const triggerVoiceChat = useCallback(() => {
-    if (isSafetyAlertActive) return;
+    if (!isActiveRef.current || isSafetyAlertActive) return;
     stopListening();
     cancelAssistantSpeech();
 
@@ -534,12 +562,14 @@ export function useVoiceAssistant({
 
   const handleManualInput = useCallback(
     (text: string) => {
+      if (!isActiveRef.current) return;
       processSpokenAnswer(text);
     },
     [processSpokenAnswer]
   );
 
   const toggleMic = useCallback(() => {
+    if (!isActiveRef.current) return;
     if (micStatus === 'LISTENING') {
       stopListening();
     } else {
@@ -556,11 +586,12 @@ export function useVoiceAssistant({
   // ------------------------------------------------------------------
   const registerInteraction = useCallback(
     (delta = 1) => {
+      if (!isActiveRef.current) return;
       setInteractionCount((prev) => {
         const next = prev + delta;
-        if (next >= 3 && stateRef.current === 'IDLE' && !isSafetyAlertActive) {
+        if (next >= 3 && stateRef.current === 'IDLE' && !isSafetyAlertActive && isActiveRef.current) {
           setTimeout(() => {
-            if (stateRef.current === 'IDLE' && !isSafetyAlertActive) {
+            if (stateRef.current === 'IDLE' && !isSafetyAlertActive && isActiveRef.current) {
               triggerVoiceChat();
             }
           }, 1800);
@@ -573,16 +604,30 @@ export function useVoiceAssistant({
 
   // Greet rider once when they start the ride / session
   const greetRiderOnStart = useCallback(() => {
-    if (isSafetyAlertActive) return;
+    if (!isActiveRef.current || isSafetyAlertActive) return;
     const greeting = 'Hello rider! SafeDrive safety systems are now active. Enjoy your ride!';
     setLastAiSpeech(greeting);
     speakAssistant(greeting, undefined, undefined, 'ENGLISH');
   }, [isSafetyAlertActive, speakAssistant]);
 
   const triggerDemoVoiceChat = useCallback(() => {
+    if (!isActiveRef.current) return;
     setInteractionCount(3);
     triggerVoiceChat();
   }, [triggerVoiceChat]);
+
+  // Cleanup immediately whenever isActive becomes false (leaving GuardianDrive)
+  useEffect(() => {
+    if (!isActive) {
+      stopListening();
+      cancelAssistantSpeech();
+      setState('IDLE');
+      setMicStatus('READY');
+      setTranscript('');
+      setInterimTranscript('');
+      consecutiveSilenceCountRef.current = 0;
+    }
+  }, [isActive, cancelAssistantSpeech, stopListening]);
 
   // Cleanup on unmount
   useEffect(() => {

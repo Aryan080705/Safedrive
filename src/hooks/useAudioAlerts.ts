@@ -208,29 +208,6 @@ export function useAudioAlerts() {
     osc.stop(now + 0.28);
   }, [isMuted, getAudioContext]);
 
-  // Cancel conversational assistant speech when pre-empted by safety alarms
-  const cancelAssistantSpeech = useCallback(() => {
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-    isAssistantSpeakingRef.current = false;
-    setIsAssistantSpeaking(false);
-  }, []);
-
-  // Voice selection helper with dynamic voice caching
-  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return;
-    const updateVoices = () => {
-      const v = window.speechSynthesis.getVoices();
-      if (v && v.length > 0) {
-        voicesRef.current = v;
-      }
-    };
-    updateVoices();
-    window.speechSynthesis.onvoiceschanged = updateVoices;
-  }, []);
-
   // Periodic resume ticker to prevent Chrome's 15-second speech synthesis freeze bug
   const resumeTickerRef = useRef<number | null>(null);
   const startResumeTicker = useCallback(() => {
@@ -248,6 +225,34 @@ export function useAudioAlerts() {
       clearInterval(resumeTickerRef.current);
       resumeTickerRef.current = null;
     }
+  }, []);
+
+  // Cancel conversational assistant speech when pre-empted by safety alarms or unmounted
+  const cancelAssistantSpeech = useCallback(() => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    stopResumeTicker();
+    if (speechSafetyTimeoutRef.current) {
+      clearTimeout(speechSafetyTimeoutRef.current);
+      speechSafetyTimeoutRef.current = null;
+    }
+    isAssistantSpeakingRef.current = false;
+    setIsAssistantSpeaking(false);
+  }, [stopResumeTicker]);
+
+  // Voice selection helper with dynamic voice caching
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    const updateVoices = () => {
+      const v = window.speechSynthesis.getVoices();
+      if (v && v.length > 0) {
+        voicesRef.current = v;
+      }
+    };
+    updateVoices();
+    window.speechSynthesis.onvoiceschanged = updateVoices;
   }, []);
 
   // Conversational Assistant Speech with feedback-loop callbacks & English voice selection
@@ -295,7 +300,7 @@ export function useAudioAlerts() {
             utterance.voice = selectedVoice;
           }
 
-          utterance.rate = 1.02; // Confident, natural English cadence
+          utterance.rate = 1.2; // Faster, responsive conversational cadence (1.2x)
           utterance.pitch = 1.0;
           utterance.volume = 1.0;
 

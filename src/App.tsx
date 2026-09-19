@@ -60,7 +60,9 @@ export const App: React.FC = () => {
     } else if (newMode === 'SAFERIDER') {
       setCameraOwner('RIDER');
     }
-    onInteractionRef.current();
+    if (newMode === 'DRIVER_MONITOR') {
+      onInteractionRef.current();
+    }
   }, []);
 
   // Driver Cam DOM Refs
@@ -223,7 +225,10 @@ export const App: React.FC = () => {
     nearestBlackspotDistanceKm: 1.2,
   }), [speedKmH, roadAssessment.score, roadAssessment.tier, driverAssessment.score, blackspotSummary.nearestCluster]);
 
-  // Voice Assistant Hook (100% Hands-Free Voice Conversation)
+  // Voice Agent is strictly scoped to GuardianDrive (mode === 'DRIVER_MONITOR')
+  const isGuardianDriveActive = mode === 'DRIVER_MONITOR';
+
+  // Voice Assistant Hook (100% Hands-Free Voice Conversation, strictly scoped to GuardianDrive)
   const {
     telemetry: voiceTelemetry,
     dismissVoiceChat,
@@ -241,24 +246,26 @@ export const App: React.FC = () => {
     isSafetyAlertActive,
     isMuted,
     roadContext: voiceRoadContext,
+    isActive: isGuardianDriveActive,
   });
 
   useEffect(() => {
     onInteractionRef.current = registerInteraction;
   }, [registerInteraction]);
 
-  // Greet rider once when audio/session starts
+  // Greet rider once when audio/session starts on GuardianDrive
   const hasGreetedRef = useRef<boolean>(false);
   useEffect(() => {
-    if (isAudioUnlocked && !hasGreetedRef.current) {
+    if (isGuardianDriveActive && isAudioUnlocked && !hasGreetedRef.current) {
       hasGreetedRef.current = true;
-      setTimeout(() => {
+      const t = setTimeout(() => {
         greetRiderOnStart();
       }, 1000);
+      return () => clearTimeout(t);
     }
-  }, [isAudioUnlocked, greetRiderOnStart]);
+  }, [isGuardianDriveActive, isAudioUnlocked, greetRiderOnStart]);
 
-  // Track safety alerts and trigger voice conversation ONLY after 2 safety alerts occur & clear
+  // Track safety alerts and trigger voice conversation ONLY on GuardianDrive after 2 safety alerts occur & clear
   const prevAlertStateRef = useRef<boolean>(false);
   const lastAlertRegisterTimeRef = useRef<number>(0);
 
@@ -274,15 +281,15 @@ export const App: React.FC = () => {
     const wasAlert = prevAlertStateRef.current;
     prevAlertStateRef.current = isAnyHazardAlertActive;
 
-    // ONLY when a real hazard alert was active and has now cleared, increment alert count
-    if (wasAlert && !isAnyHazardAlertActive) {
+    // ONLY when a real hazard alert was active and has now cleared on GuardianDrive, increment alert count
+    if (wasAlert && !isAnyHazardAlertActive && isGuardianDriveActive) {
       const now = Date.now();
       if (now - lastAlertRegisterTimeRef.current > 3000) {
         lastAlertRegisterTimeRef.current = now;
         registerInteraction(1);
       }
     }
-  }, [isAnyHazardAlertActive, registerInteraction]);
+  }, [isAnyHazardAlertActive, isGuardianDriveActive, registerInteraction]);
 
   // Evaluate Driver Risk on Telemetry Update & Drowsiness Audio Trigger
   useEffect(() => {
@@ -1061,16 +1068,18 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      {/* 100% Hands-Free Voice Assistant HUD */}
-      <VoiceAssistantHUD
-        telemetry={voiceTelemetry}
-        onDismiss={dismissVoiceChat}
-        isSpeechSupported={isSpeechSupported}
-        onTriggerChat={triggerVoiceChat}
-        onTriggerDemoChat={triggerDemoVoiceChat}
-        onSubmitText={handleManualInput}
-        onToggleMic={toggleMic}
-      />
+      {/* 100% Hands-Free Voice Assistant HUD (Scoped ONLY to GuardianDrive) */}
+      {isGuardianDriveActive && (
+        <VoiceAssistantHUD
+          telemetry={voiceTelemetry}
+          onDismiss={dismissVoiceChat}
+          isSpeechSupported={isSpeechSupported}
+          onTriggerChat={triggerVoiceChat}
+          onTriggerDemoChat={triggerDemoVoiceChat}
+          onSubmitText={handleManualInput}
+          onToggleMic={toggleMic}
+        />
+      )}
 
       {/* Simulated Emergency Modal */}
       <EmergencyModal
