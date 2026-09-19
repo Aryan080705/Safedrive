@@ -1,0 +1,328 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand Core Palette: Premium Olive / Gold System */
+  --color-warm-cream: #F5EFE3;
+  --color-deep-olive: #4F5B2A;
+  --color-muted-gold: #B8892D;
+  --color-sand: #D8C9A8;
+
+  /* Surfaces */
+  --color-darkest: #0C0F0A;
+  --color-primary-dark: #12160F;
+  --color-secondary-surface: #181D14;
+  --color-elevated-surface: #20261A;
+
+  /* Typography */
+  --color-text-primary: #F5EFE3;
+  --color-text-secondary: #A8AA9B;
+  --color-text-muted: #777C6F;
+
+  /* Semantic Accents */
+  --color-critical: #D94B45;
+  --color-success: #5D9B64;
+
+  /* Overrides for zinc scale -> Deep Olive-Black surfaces */
+  --color-zinc-950: #0C0F0A;
+  --color-zinc-900: #12160F;
+  --color-zinc-850: #181D14;
+  --color-zinc-800: #20261A;
+  --color-zinc-750: #283021;
+  --color-zinc-700: #4F5B2A;
+  --color-zinc-650: #5C6932;
+  --color-zinc-600: #6B7B3B;
+  --color-zinc-500: #777C6F;
+  --color-zinc-400: #A8AA9B;
+  --color-zinc-300: #D8C9A8;
+  --color-zinc-200: #EAE3D2;
+  --color-zinc-100: #F5EFE3;
+  --color-zinc-50: #FFFFFF;
+
+  /* Overrides for slate scale -> Deep Olive-Black surfaces */
+  --color-slate-950: #0C0F0A;
+  --color-slate-900: #12160F;
+  --color-slate-850: #181D14;
+  --color-slate-800: #20261A;
+  --color-slate-700: #4F5B2A;
+  --color-slate-600: #5C6932;
+  --color-slate-500: #777C6F;
+  --color-slate-400: #A8AA9B;
+  --color-slate-300: #D8C9A8;
+  --color-slate-200: #EAE3D2;
+  --color-slate-100: #F5EFE3;
+
+  /* Semantic Overrides: Amber / Yellow -> Muted Gold #B8892D & Sand #D8C9A8 */
+  --color-amber-300: #E8D39B;
+  --color-amber-400: #D4A84D;
+  --color-amber-500: #B8892D;
+  --color-amber-600: #9E7422;
+  --color-amber-950: #1A170F;
+
+  --color-yellow-300: #E8D39B;
+  --color-yellow-400: #D4A84D;
+  --color-yellow-500: #B8892D;
+  --color-yellow-600: #9E7422;
+
+  /* Semantic Overrides: Rose / Red -> Critical Red #D94B45 */
+  --color-rose-300: #F1928E;
+  --color-rose-400: #E66A65;
+  --color-rose-500: #D94B45;
+  --color-rose-600: #C23731;
+  --color-rose-700: #A52924;
+  --color-rose-800: #7F1F1B;
+  --color-rose-900: #4E1412;
+  --color-rose-950: #240C0B;
+
+  --color-red-400: #E66A65;
+  --color-red-500: #D94B45;
+  --color-red-600: #C23731;
+
+  /* Semantic Overrides: Emerald / Green -> Success Green #5D9B64 */
+  --color-emerald-300: #8DC392;
+  --color-emerald-400: #5D9B64;
+  --color-emerald-500: #4B8552;
+  --color-emerald-600: #3B6F41;
+  --color-emerald-950: #0E1A10;
+
+  --color-green-400: #5D9B64;
+  --color-green-500: #4B8552;
+
+  /* Eliminates neon cyan -> Maps to Muted Gold #B8892D & Sand #D8C9A8 */
+  --color-cyan-200: #EAE3D2;
+  --color-cyan-300: #D8C9A8;
+  --color-cyan-400: #B8892D;
+  --color-cyan-500: #4F5B2A;
+  --color-cyan-600: #4F5B2A;
+  --color-cyan-700: #283021;
+  --color-cyan-800: #20261A;
+  --color-cyan-900: #181D14;
+  --color-cyan-950: #0C0F0A;
+
+  /* Eliminates purple / indigo -> Maps to Deep Olive #4F5B2A & Surfaces */
+  --color-purple-200: #EAE3D2;
+  --color-purple-300: #D8C9A8;
+  --color-purple-400: #B8892D;
+  --color-purple-500: #4F5B2A;
+  --color-purple-600: #20261A;
+  --color-purple-800: #181D14;
+  --color-purple-900: #12160F;
+  --color-purple-950: #0C0F0A;
+
+  --color-indigo-300: #D8C9A8;
+  --color-indigo-400: #B8892D;
+  --color-indigo-500: #4F5B2A;
+  --color-indigo-600: #20261A;
+  --color-indigo-950: #0C0F0A;
+}
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background-color: #0C0F0A;
+    color: #F5EFE3;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  ::selection {
+    background-color: rgba(184, 137, 45, 0.35);
+    color: #F5EFE3;
+  }
+
+  /* Mono font utility enforcement */
+  .font-mono {
+    font-family: var(--font-mono) !important;
+  }
+}
+
+/* Road-Tech Deep Olive-Black Grid Background */
+.cyber-grid-bg {
+  background-color: #0C0F0A;
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(79, 91, 42, 0.18) 0%, transparent 65%),
+    linear-gradient(rgba(245, 239, 227, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245, 239, 227, 0.015) 1px, transparent 1px);
+  background-size: 100% 100%, 32px 32px, 32px 32px;
+  background-position: center top, 0 0, 0 0;
+}
+
+/* Premium Automotive Olive / Gold HUD Cards */
+.hud-card {
+  background: #12160F;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(245, 239, 227, 0.08);
+  box-shadow: 
+    inset 0 1px 0 0 rgba(245, 239, 227, 0.04),
+    0 8px 24px -4px rgba(0, 0, 0, 0.6);
+  border-radius: 0.75rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hud-card-interactive {
+  cursor: pointer;
+}
+
+.hud-card-interactive:hover {
+  background: #181D14;
+  border-color: rgba(184, 137, 45, 0.35);
+  box-shadow: 
+    inset 0 1px 0 0 rgba(245, 239, 227, 0.06),
+    0 12px 32px -4px rgba(0, 0, 0, 0.75);
+  transform: translateY(-1px);
+}
+
+/* Semantic Glow Accents */
+.glow-emerald {
+  box-shadow: 0 0 18px -2px rgba(93, 155, 100, 0.3);
+}
+
+.glow-amber {
+  box-shadow: 0 0 18px -2px rgba(184, 137, 45, 0.35);
+}
+
+.glow-yellow {
+  box-shadow: 0 0 18px -2px rgba(184, 137, 45, 0.35);
+}
+
+.glow-rose {
+  box-shadow: 0 0 20px -2px rgba(217, 75, 69, 0.45);
+}
+
+.glow-navy {
+  box-shadow: 0 0 18px -2px rgba(79, 91, 42, 0.4);
+}
+
+/* Brackets with Subtle Gold Accent */
+.hud-brackets {
+  position: relative;
+}
+
+.hud-brackets::before,
+.hud-brackets::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  pointer-events: none;
+  border-color: rgba(184, 137, 45, 0.3);
+  border-style: solid;
+  transition: border-color 0.2s ease;
+}
+
+.hud-brackets::before {
+  top: 6px;
+  left: 6px;
+  border-width: 1.5px 0 0 1.5px;
+}
+
+.hud-brackets::after {
+  bottom: 6px;
+  right: 6px;
+  border-width: 0 1.5px 1.5px 0;
+}
+
+/* Subtle clean video scanlines */
+.hud-scanlines {
+  background: linear-gradient(
+    rgba(12, 15, 10, 0) 50%, 
+    rgba(0, 0, 0, 0.3) 50%
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+}
+
+/* Pulse animation for safety alerts */
+@keyframes alert-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.88;
+    transform: scale(1.008);
+  }
+}
+
+.animate-alert-pulse {
+  animation: alert-pulse 1.4s ease-in-out infinite;
+}
+
+/* Deep Olive-Black Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0C0F0A;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #283021;
+  border-radius: 4px;
+  border: 1px solid rgba(245, 239, 227, 0.05);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4F5B2A;
+}
+
+/* Horizontal scroll without visible scrollbar utility */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Leaflet Dark Deep Olive-Black Map Overrides */
+.leaflet-container {
+  background-color: #0C0F0A !important;
+  font-family: inherit !important;
+}
+
+.leaflet-tile-pane {
+  filter: brightness(0.64) invert(1) contrast(2.6) hue-rotate(95deg) saturate(0.25);
+}
+
+.leaflet-control-zoom {
+  border: 1px solid rgba(245, 239, 227, 0.1) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+
+.leaflet-control-zoom a {
+  background-color: #12160F !important;
+  color: #B8892D !important;
+  border-bottom: 1px solid rgba(245, 239, 227, 0.08) !important;
+  transition: background-color 0.15s ease;
+}
+
+.leaflet-control-zoom a:hover {
+  background-color: #20261A !important;
+  color: #F5EFE3 !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #12160F !important;
+  color: #F5EFE3 !important;
+  border: 1px solid rgba(245, 239, 227, 0.12) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.8) !important;
+}
+
+.leaflet-popup-tip {
+  background: #12160F !important;
+}
