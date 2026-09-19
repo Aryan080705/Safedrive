@@ -69,6 +69,8 @@ export function useVoiceAssistant({
   const startDelayTimeoutRef = useRef<number | null>(null);
   const pausedFromStateRef = useRef<VoiceAssistantState | null>(null);
   const consecutiveSilenceCountRef = useRef<number>(0);
+  const lastProcessedSpeechRef = useRef<{ text: string; time: number }>({ text: '', time: 0 });
+  const completeIdleTimeoutRef = useRef<number | null>(null);
   // Bug 5 Fix: Track manual aborts to prevent ghost onend processing
   const wasManuallyAbortedRef = useRef<boolean>(false);
 
@@ -108,6 +110,10 @@ export function useVoiceAssistant({
   }, []);
 
   const dismissVoiceChat = useCallback(() => {
+    if (completeIdleTimeoutRef.current) {
+      clearTimeout(completeIdleTimeoutRef.current);
+      completeIdleTimeoutRef.current = null;
+    }
     cancelAssistantSpeech();
     stopListening();
     setState('IDLE');
@@ -119,12 +125,26 @@ export function useVoiceAssistant({
 
   const processSpokenAnswer = useCallback(
     (spokenText: string) => {
+      cancelAssistantSpeech();
       stopListening();
       const current = stateRef.current;
       const lang = languageRef.current;
       const cleanText = spokenText.trim();
+
+      // Deduplicate rapid duplicate triggers (1.5s window)
+      const now = Date.now();
+      if (
+        cleanText &&
+        cleanText.toLowerCase() === lastProcessedSpeechRef.current.text.toLowerCase() &&
+        now - lastProcessedSpeechRef.current.time < 1500
+      ) {
+        return;
+      }
+      lastProcessedSpeechRef.current = { text: cleanText, time: now };
+
       setTranscript(cleanText);
       setInterimTranscript('');
+      setMicStatus('PROCESSING');
 
       // -------------------------------------------------------------
       // 1. Check for Real Road Intents (Status, Speed, Danger, Mute)
@@ -326,11 +346,15 @@ export function useVoiceAssistant({
           finalClosing,
           () => {
             setState('COMPLETE');
-            setTimeout(() => {
+            if (completeIdleTimeoutRef.current) {
+              clearTimeout(completeIdleTimeoutRef.current);
+            }
+            completeIdleTimeoutRef.current = window.setTimeout(() => {
+              completeIdleTimeoutRef.current = null;
               if (stateRef.current === 'COMPLETE') {
                 setState('IDLE');
               }
-            }, 5000);
+            }, 3500);
           },
           undefined,
           lang
@@ -416,7 +440,7 @@ export function useVoiceAssistant({
             setTranscript(finalAccumulated);
           }
 
-          // Generous 2.5s silence timeout so rider isn't cut off mid-thought
+          // Responsive 1.4s silence timeout for fast, natural conversational cadence
           if (silenceTimeoutRef.current) {
             clearTimeout(silenceTimeoutRef.current);
           }
@@ -424,7 +448,7 @@ export function useVoiceAssistant({
             if (isRecognitionActiveRef.current && isActiveRef.current) {
               recognition.stop();
             }
-          }, 2500);
+          }, 1400);
         };
 
         recognition.onspeechend = () => {
@@ -472,12 +496,12 @@ export function useVoiceAssistant({
           } else if (event.error === 'no-speech') {
             processSpokenAnswer('');
           } else if (event.error !== 'aborted') {
-            setMicStatus('ERROR');
-            setErrorMessage(`Recognition error: ${event.error}`);
+            // Reset to READY cleanly without alarming technical error popups
+            setMicStatus('READY');
           }
         };
 
-        // 200ms buffer flush delay ensures speaker audio is fully drained before mic starts listening
+        // Snappy 60ms buffer flush delay ensures speaker audio is cleared before mic starts listening
         if (startDelayTimeoutRef.current) {
           clearTimeout(startDelayTimeoutRef.current);
         }
@@ -490,10 +514,10 @@ export function useVoiceAssistant({
               // Recognition already started or aborted
             }
           }
-        }, 200);
+        }, 60);
       } catch (err: any) {
         console.warn('Voice assistant recognition start error:', err);
-        setMicStatus('ERROR');
+        setMicStatus('READY');
       }
     };
   }, [isSpeechSupported, processSpokenAnswer, stopListening]);
@@ -563,9 +587,10 @@ export function useVoiceAssistant({
   const handleManualInput = useCallback(
     (text: string) => {
       if (!isActiveRef.current) return;
+      cancelAssistantSpeech();
       processSpokenAnswer(text);
     },
-    [processSpokenAnswer]
+    [cancelAssistantSpeech, processSpokenAnswer]
   );
 
   const toggleMic = useCallback(() => {
@@ -573,13 +598,14 @@ export function useVoiceAssistant({
     if (micStatus === 'LISTENING') {
       stopListening();
     } else {
+      cancelAssistantSpeech();
       if (stateRef.current === 'IDLE') {
         triggerVoiceChat();
       } else {
         startListeningForCurrentState(stateRef.current);
       }
     }
-  }, [micStatus, stopListening, triggerVoiceChat, startListeningForCurrentState]);
+  }, [cancelAssistantSpeech, micStatus, startListeningForCurrentState, stopListening, triggerVoiceChat]);
 
   // ------------------------------------------------------------------
   // Manual trigger & Session interaction counter
@@ -634,6 +660,10 @@ export function useVoiceAssistant({
   // Cleanup immediately whenever isActive becomes false (leaving GuardianDrive)
   useEffect(() => {
     if (!isActive) {
+      if (completeIdleTimeoutRef.current) {
+        clearTimeout(completeIdleTimeoutRef.current);
+        completeIdleTimeoutRef.current = null;
+      }
       stopListening();
       cancelAssistantSpeech();
       setState('IDLE');
@@ -647,6 +677,10 @@ export function useVoiceAssistant({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      if (completeIdleTimeoutRef.current) {
+        clearTimeout(completeIdleTimeoutRef.current);
+        completeIdleTimeoutRef.current = null;
+      }
       stopListening();
       cancelAssistantSpeech();
     };

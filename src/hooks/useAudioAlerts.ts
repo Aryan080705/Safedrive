@@ -19,6 +19,7 @@ export function useAudioAlerts() {
   const isMutedRef = useRef<boolean>(false);
   isMutedRef.current = isMuted;
   const speechSafetyTimeoutRef = useRef<number | null>(null);
+  const pendingSpeakTimeoutRef = useRef<number | null>(null);
 
   // Initialize or retrieve AudioContext
   const getAudioContext = useCallback(() => {
@@ -229,6 +230,10 @@ export function useAudioAlerts() {
 
   // Cancel conversational assistant speech when pre-empted by safety alarms or unmounted
   const cancelAssistantSpeech = useCallback(() => {
+    if (pendingSpeakTimeoutRef.current) {
+      clearTimeout(pendingSpeakTimeoutRef.current);
+      pendingSpeakTimeoutRef.current = null;
+    }
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
@@ -269,7 +274,11 @@ export function useAudioAlerts() {
         return;
       }
 
-      // Clear any previous safety timeout
+      // Prevent speech queue: cancel any pending scheduled speech and safety timeout
+      if (pendingSpeakTimeoutRef.current) {
+        clearTimeout(pendingSpeakTimeoutRef.current);
+        pendingSpeakTimeoutRef.current = null;
+      }
       if (speechSafetyTimeoutRef.current) {
         clearTimeout(speechSafetyTimeoutRef.current);
         speechSafetyTimeoutRef.current = null;
@@ -279,8 +288,9 @@ export function useAudioAlerts() {
         window.speechSynthesis.cancel();
         stopResumeTicker();
 
-        // Small 40ms micro-pause ensures cancel() completes cleanly before speak()
-        setTimeout(() => {
+        // Immediate 20ms micro-pause ensures cancel() completes cleanly before speak()
+        pendingSpeakTimeoutRef.current = window.setTimeout(() => {
+          pendingSpeakTimeoutRef.current = null;
           if (isDrowsinessActiveRef.current || isMutedRef.current) {
             onEnd?.();
             return;
@@ -316,10 +326,10 @@ export function useAudioAlerts() {
               }
               isAssistantSpeakingRef.current = false;
               setIsAssistantSpeaking(false);
-              // 150ms buffer flush prevents mic from picking up residual speaker echo
+              // Snappy 60ms buffer flush prevents mic from picking up residual speaker echo
               setTimeout(() => {
                 onEnd?.();
-              }, 150);
+              }, 60);
             }
           };
 
@@ -348,7 +358,7 @@ export function useAudioAlerts() {
 
           window.speechSynthesis.resume();
           window.speechSynthesis.speak(utterance);
-        }, 40);
+        }, 20);
       } catch (err) {
         console.warn('[SafeDrive] Speech speakAssistant exception:', err);
         stopResumeTicker();

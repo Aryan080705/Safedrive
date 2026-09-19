@@ -33,7 +33,10 @@ export class VoiceResponseEngine {
     const tier = context.roadTier || 'LOW';
 
     // 1. Mute / Stop / Dismiss Intent
-    const mutePatterns = ['mute', 'chup', 'shant', 'quiet', 'stop', 'band karo', 'exit', 'cancel', 'dismiss', 'shut up', 'pause'];
+    const mutePatterns = [
+      'mute', 'chup', 'shant', 'quiet', 'stop', 'band karo', 'exit', 'cancel', 'dismiss',
+      'shut up', 'pause', 'be quiet', 'stop talking', 'hush', 'band ho jao', 'silent', 'close assistant'
+    ];
     if (mutePatterns.some((p) => lower.includes(p))) {
       return {
         isHandled: true,
@@ -43,17 +46,24 @@ export class VoiceResponseEngine {
     }
 
     // 2. Status / Safety Check Intent
-    const statusPatterns = ['status', 'report', 'all good', 'how are things', 'risk level', 'safety check', 'systems check'];
+    const statusPatterns = [
+      'status', 'report', 'all good', 'how are things', 'risk level', 'safety check',
+      'systems check', 'how is my driving', 'how am i driving', 'driver status', 'safety status',
+      'check status', 'kaisa chal raha hai', 'sab theek hai', 'system status', 'status update'
+    ];
     if (statusPatterns.some((p) => lower.includes(p))) {
       return {
         isHandled: true,
         action: 'STATUS',
-        reply: `All clear! Speed is ${speed} km/h, road risk tier is ${tier}, and all vision sensors are operating normally.`,
+        reply: `All clear. Speed is ${speed} km/h, road risk tier is ${tier}, sensors nominal.`,
       };
     }
 
     // 3. Speed Check Intent
-    const speedPatterns = ['speed', 'how fast', 'speed check', 'current speed'];
+    const speedPatterns = [
+      'speed', 'how fast', 'speed check', 'current speed', 'what is my speed',
+      'how fast am i going', 'kitni speed hai', 'gadi ki speed', 'check speed'
+    ];
     if (speedPatterns.some((p) => lower.includes(p))) {
       return {
         isHandled: true,
@@ -63,24 +73,31 @@ export class VoiceResponseEngine {
     }
 
     // 4. Blackspot / Danger Zone Intent
-    const blackspotPatterns = ['blackspot', 'hotspot', 'danger zone', 'hazard', 'accident zone'];
+    const blackspotPatterns = [
+      'blackspot', 'hotspot', 'danger zone', 'hazard', 'accident zone',
+      'nearest danger', 'nearest accident', 'nearest blackspot', 'ahead danger',
+      'road risk', 'danger ahead', 'accident spot', 'khatra'
+    ];
     if (blackspotPatterns.some((p) => lower.includes(p))) {
       const spot = context.nearestBlackspotName || 'Noida Expressway Flyover';
       const dist = context.nearestBlackspotDistanceKm || 1.2;
       return {
         isHandled: true,
         action: 'BLACKSPOT',
-        reply: `Nearest accident blackspot is ${spot}, approximately ${dist} km ahead. Exercise caution.`,
+        reply: `Nearest blackspot is ${spot}, ${dist} kilometers ahead. Drive carefully.`,
       };
     }
 
     // 5. Emergency / Help Intent
-    const emergencyPatterns = ['emergency', 'help', 'crash', 'accident', 'sos', 'mayday'];
+    const emergencyPatterns = [
+      'emergency', 'help', 'crash', 'accident', 'sos', 'mayday',
+      'call ambulance', 'call police', 'i need help', 'madad', 'bachao'
+    ];
     if (emergencyPatterns.some((p) => lower.includes(p))) {
       return {
         isHandled: true,
         action: 'EMERGENCY',
-        reply: "If you need emergency help, pull over safely. SafeDrive SOS dispatch is standing by!",
+        reply: "Emergency protocol standing by. Pull over safely, SOS dispatch is ready.",
       };
     }
 
